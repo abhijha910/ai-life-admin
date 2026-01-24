@@ -1,10 +1,5 @@
-# Restart Backend Server
-Write-Host "Restarting Backend Server..." -ForegroundColor Cyan
-
-# Kill existing Python processes
-Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 2
-
+# Start Backend Server
+Write-Host "Starting Backend Server..." -ForegroundColor Cyan
 cd backend
 
 if (-not (Test-Path ".\venv\Scripts\Activate.ps1")) {

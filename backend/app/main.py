@@ -1,9 +1,14 @@
 """FastAPI application entry point"""
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from contextlib import asynccontextmanager
 import structlog
+
+# Fix for Windows multiprocessing with uvicorn reload
+if os.name == 'nt':  # Check if OS is Windows
+    os.environ["PYTHON_MULTIPROCESSING_START_METHOD"] = "spawn"
 
 from app.config import settings
 from app.database import async_engine, Base
