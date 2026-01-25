@@ -67,13 +67,9 @@ class DocumentService:
             await db.commit()
             await db.refresh(document)
             
-            # Trigger async processing (would be done by worker in production)
-            # For now, process synchronously
-            try:
-                await self.process_document(db, document, file_content)
-            except Exception as process_error:
-                # Don't fail upload if processing fails
-                logger.warning("Document processing failed", error=str(process_error), document_id=str(document.id))
+            # Note: Processing is now done in the API endpoint after upload
+            # This allows for better error handling and task extraction
+            # The file_content is passed to the API endpoint for processing
             
             return document
         except Exception as e:
@@ -90,9 +86,30 @@ class DocumentService:
         try:
             # Get file content if not provided
             if file_content is None:
-                # In production, download from S3
-                # For now, assume file_content is available
-                pass
+                # Read file from local storage or S3
+                if document.s3_key.startswith("local:"):
+                    # Extract local file path
+                    local_path = document.s3_key.replace("local:", "")
+                    if os.path.exists(local_path):
+                        with open(local_path, 'rb') as f:
+                            file_content = f.read()
+                        logger.info(f"Read file from local storage: {local_path}")
+                    else:
+                        logger.error(f"Local file not found: {local_path}")
+                        raise FileNotFoundError(f"File not found: {local_path}")
+                else:
+                    # In production, download from S3
+                    # For now, try to find in local storage as fallback
+                    logger.warning("S3 file download not implemented, skipping OCR")
+                    document.processed_at = datetime.now()
+                    await db.commit()
+                    return document
+            
+            if file_content is None:
+                logger.error("Cannot process document: file content not available")
+                document.processed_at = datetime.now()
+                await db.commit()
+                return document
             
             # Extract text with OCR
             ocr_text, success = ocr_pipeline.extract_text(

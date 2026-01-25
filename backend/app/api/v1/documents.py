@@ -62,6 +62,48 @@ async def upload_document(
             file.content_type or "application/octet-stream"
         )
         
+        # Automatically process document and extract tasks after upload
+        try:
+            # Process document (OCR + classification)
+            document = await document_service.process_document(db, document, file_content)
+            
+            # Extract tasks from document if OCR text available
+            if document.ocr_text:
+                tasks = await task_generator.extract_tasks(
+                    document.ocr_text,
+                    "document",
+                    context={
+                        "document_id": str(document.id),
+                        "file_name": document.file_name,
+                        "file_type": document.file_type,
+                        "classification": document.ai_classification
+                    }
+                )
+                
+                # Create tasks automatically
+                for task_data in tasks:
+                    try:
+                        task_create = TaskCreate(
+                            title=task_data["title"],
+                            description=task_data.get("description"),
+                            due_date=datetime.fromisoformat(task_data["due_date"]) if task_data.get("due_date") else None,
+                            priority=task_data.get("priority", 50),
+                            estimated_duration=task_data.get("estimated_duration")
+                        )
+                        await task_service.create_task(
+                            db,
+                            current_user,
+                            task_create,
+                            source_type="document",
+                            source_id=str(document.id)
+                        )
+                    except Exception as task_error:
+                        logger.warning(f"Failed to create task from document: {task_error}")
+                        continue
+        except Exception as process_error:
+            # Don't fail upload if processing fails
+            logger.warning(f"Document processing failed after upload: {process_error}")
+        
         # Convert to response format
         return DocumentUploadResponse(
             id=str(document.id),

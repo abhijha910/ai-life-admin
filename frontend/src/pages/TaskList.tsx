@@ -105,15 +105,15 @@ export default function TaskList() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 animate-fade-in">
       <Navigation />
 
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Backend Connection Error Banner */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl animate-slide-down hover-glow">
             <div className="flex items-center space-x-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
+              <AlertCircle className="w-5 h-5 text-red-600 animate-pulse" />
               <div>
                 <p className="text-sm font-semibold text-red-800">Backend Connection Error</p>
                 <p className="text-xs text-red-600 mt-1">
@@ -126,32 +126,38 @@ export default function TaskList() {
           </div>
         )}
         
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden animate-slide-up hover-glow">
           {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+          <div className="px-6 py-6 border-b border-gray-200/50 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">Tasks</h2>
+              <div className="flex items-center space-x-3 animate-slide-down">
+                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <CheckCircle2 className="w-6 h-6 text-white" />
+                </div>
+                <h2 className="text-3xl font-bold text-white drop-shadow-lg">Tasks</h2>
+              </div>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                className="flex items-center space-x-2 px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-xl hover:bg-white/30 transition-all duration-300 hover:scale-105 hover:shadow-lg group"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
                 <span>New Task</span>
               </button>
             </div>
 
             {/* Filters */}
-            <div className="flex items-center space-x-2">
-              <Filter className="w-4 h-4 text-gray-500" />
-              {(['all', 'pending', 'in_progress', 'completed'] as const).map((f) => (
+            <div className="flex items-center space-x-2 animate-slide-up">
+              <Filter className="w-4 h-4 text-white/80" />
+              {(['all', 'pending', 'in_progress', 'completed'] as const).map((f, index) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 hover:scale-105 ${
                     filter === f
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-white text-gray-600 hover:bg-gray-100'
+                      ? 'bg-white text-indigo-600 shadow-lg'
+                      : 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30'
                   }`}
+                  style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   {f.charAt(0).toUpperCase() + f.slice(1).replace('_', ' ')}
                 </button>
@@ -160,31 +166,34 @@ export default function TaskList() {
           </div>
 
           {/* Task List */}
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-gray-200/50">
             {isLoading ? (
-              <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                <p className="mt-4 text-gray-500">Loading tasks...</p>
+              <div className="text-center py-20 animate-fade-in">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-indigo-200 border-t-indigo-600"></div>
+                <p className="mt-6 text-gray-500 text-lg font-medium animate-pulse">Loading tasks...</p>
               </div>
             ) : tasks.length > 0 ? (
-              tasks.map((task: any) => (
+              tasks.map((task: any, index: number) => (
                 <div
                   key={task.id}
-                  className={`p-4 hover:bg-gray-50 transition-colors ${
-                    task.status === 'completed' ? 'opacity-75' : ''
+                  className={`stagger-item p-5 hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-300 hover-lift group ${
+                    task.status === 'completed' ? 'opacity-60' : ''
                   }`}
+                  style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-3 flex-1">
+                    <div className="flex items-start space-x-4 flex-1">
                       <button
                         onClick={() => handleComplete(task.id)}
-                        className="mt-0.5"
+                        className="mt-0.5 p-2 hover:scale-110 transition-transform duration-300 group/check"
                       >
-                        {getStatusIcon(task.status)}
+                        <div className="group-hover/check:animate-pulse">
+                          {getStatusIcon(task.status)}
+                        </div>
                       </button>
                       <div className="flex-1 min-w-0">
                         <h3
-                          className={`font-semibold mb-1 ${
+                          className={`font-bold text-lg mb-2 group-hover:text-indigo-600 transition-colors ${
                             task.status === 'completed'
                               ? 'line-through text-gray-400'
                               : 'text-gray-900'
@@ -193,21 +202,21 @@ export default function TaskList() {
                           {task.title}
                         </h3>
                         {task.description && (
-                          <p className="text-sm text-gray-600 mb-2">{task.description}</p>
+                          <p className="text-sm text-gray-600 mb-3 leading-relaxed">{task.description}</p>
                         )}
-                        <div className="flex items-center flex-wrap gap-3 text-xs text-gray-500">
-                          <span className={`px-2 py-1 rounded border ${getPriorityColor(task.priority)}`}>
+                        <div className="flex items-center flex-wrap gap-2 text-xs">
+                          <span className={`px-3 py-1.5 rounded-full font-semibold border shadow-sm ${getPriorityColor(task.priority)}`}>
                             <Flag className="w-3 h-3 inline mr-1" />
                             Priority: {task.priority}
                           </span>
                           {task.due_date && (
-                            <span className="flex items-center space-x-1">
+                            <span className="flex items-center space-x-1 px-3 py-1.5 rounded-full bg-white shadow-sm font-semibold text-gray-700">
                               <Calendar className="w-3 h-3" />
                               <span>Due: {format(new Date(task.due_date), 'MMM d, yyyy')}</span>
                             </span>
                           )}
                           {task.estimated_duration && (
-                            <span className="flex items-center space-x-1">
+                            <span className="flex items-center space-x-1 px-3 py-1.5 rounded-full bg-white shadow-sm font-semibold text-gray-700">
                               <Clock className="w-3 h-3" />
                               <span>{task.estimated_duration} min</span>
                             </span>
@@ -219,32 +228,36 @@ export default function TaskList() {
                       {task.status !== 'completed' && (
                         <button
                           onClick={() => setEditingTask(task)}
-                          className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          className="p-3 text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 hover:scale-110 transition-all duration-300 group/edit"
+                          title="Edit"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-5 h-5 group-hover/edit:animate-pulse" />
                         </button>
                       )}
                       <button
                         onClick={() => handleDelete(task.id)}
-                        className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-3 text-red-600 bg-red-50 rounded-xl hover:bg-red-100 hover:scale-110 transition-all duration-300 group/delete"
+                        title="Delete"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-5 h-5 group-hover/delete:animate-pulse" />
                       </button>
                     </div>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-12">
-                <CheckCircle2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg font-medium">No tasks found</p>
-                <p className="text-gray-400 text-sm mt-2">
+              <div className="text-center py-20 animate-bounce-in">
+                <div className="inline-block p-6 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full mb-6 animate-pulse">
+                  <CheckCircle2 className="w-16 h-16 text-indigo-600" />
+                </div>
+                <p className="text-gray-600 text-xl font-bold mb-2">No tasks found</p>
+                <p className="text-gray-400 text-sm mb-6">
                   {filter !== 'all' ? `No ${filter} tasks` : 'Create your first task to get started'}
                 </p>
                 {filter === 'all' && (
                   <button
                     onClick={() => setShowCreateModal(true)}
-                    className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 hover:scale-105 hover:shadow-lg"
                   >
                     Create Task
                   </button>
@@ -333,9 +346,19 @@ function TaskModal({ task, onClose, onSave, isSubmitting = false }: {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-6">
-        <h3 className="text-xl font-bold mb-4">{task ? 'Edit Task' : 'Create New Task'}</h3>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4">
+      <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl max-w-lg w-full p-8 animate-scale-in border border-gray-200/50">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            {task ? 'Edit Task' : 'Create New Task'}
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-300 hover:rotate-90"
+          >
+            ✕
+          </button>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
@@ -344,7 +367,7 @@ function TaskModal({ task, onClose, onSave, isSubmitting = false }: {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 hover:border-indigo-300"
             />
           </div>
           <div>
@@ -353,7 +376,7 @@ function TaskModal({ task, onClose, onSave, isSubmitting = false }: {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 hover:border-indigo-300"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -365,7 +388,7 @@ function TaskModal({ task, onClose, onSave, isSubmitting = false }: {
                 max="100"
                 value={priority}
                 onChange={(e) => setPriority(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 hover:border-indigo-300"
               />
             </div>
             <div>
@@ -375,7 +398,7 @@ function TaskModal({ task, onClose, onSave, isSubmitting = false }: {
                 min="1"
                 value={duration}
                 onChange={(e) => setDuration(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 hover:border-indigo-300"
               />
             </div>
           </div>
@@ -385,26 +408,26 @@ function TaskModal({ task, onClose, onSave, isSubmitting = false }: {
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 hover:border-indigo-300"
             />
           </div>
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 font-semibold hover:scale-105 hover:shadow-lg"
             >
               {isSubmitting ? (
                 <>
-                  <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
                   <span>{task ? 'Updating...' : 'Creating...'}</span>
                 </>
               ) : (

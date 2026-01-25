@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Navigation from '../components/Navigation'
 import api from '../services/api'
-import { Settings as SettingsIcon, User, Bell, Clock, Sparkles, Save, Shield } from 'lucide-react'
+import { Settings as SettingsIcon, User, Bell, Clock, Sparkles, Save, Shield, Loader2, CheckCircle2 } from 'lucide-react'
 
 export default function Settings() {
   const queryClient = useQueryClient()
@@ -26,14 +26,12 @@ export default function Settings() {
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: any) => {
-      // Convert daily_plan_time from "HH:mm" to time object format
       const settingsData: any = {
         timezone: data.timezone,
         notification_preferences: data.notification_preferences,
         ai_preferences: data.ai_preferences,
       }
       
-      // Convert time string to proper format
       if (data.daily_plan_time) {
         const [hours, minutes] = data.daily_plan_time.split(':')
         settingsData.daily_plan_time = `${hours}:${minutes}:00`
@@ -56,7 +54,6 @@ export default function Settings() {
     ai_preferences: {} as Record<string, any>,
   })
 
-  // Update form data when settings load
   useEffect(() => {
     if (userData) {
       setFormData(prev => ({ ...prev, full_name: userData.full_name || '' }))
@@ -66,7 +63,7 @@ export default function Settings() {
         ...prev,
         timezone: settingsData.timezone || 'UTC',
         daily_plan_time: settingsData.daily_plan_time 
-          ? settingsData.daily_plan_time.substring(0, 5) // Convert "08:00:00" to "08:00"
+          ? settingsData.daily_plan_time.substring(0, 5)
           : '08:00',
         notification_preferences: settingsData.notification_preferences || {},
         ai_preferences: settingsData.ai_preferences || {},
@@ -79,44 +76,47 @@ export default function Settings() {
   }
 
   const tabs = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'ai', label: 'AI Preferences', icon: Sparkles },
-    { id: 'account', label: 'Account', icon: Shield },
+    { id: 'profile', label: 'Profile', icon: User, color: 'from-indigo-500 to-blue-500' },
+    { id: 'notifications', label: 'Notifications', icon: Bell, color: 'from-purple-500 to-pink-500' },
+    { id: 'ai', label: 'AI Preferences', icon: Sparkles, color: 'from-pink-500 to-red-500' },
+    { id: 'account', label: 'Account', icon: Shield, color: 'from-gray-500 to-gray-600' },
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 animate-fade-in">
       <Navigation />
 
-      <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <main className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden animate-slide-up hover-glow">
           {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
-            <div className="flex items-center space-x-3">
-              <SettingsIcon className="w-6 h-6 text-indigo-600" />
-              <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
+          <div className="px-6 py-6 border-b border-gray-200/50 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">
+            <div className="flex items-center space-x-3 animate-slide-down">
+              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                <SettingsIcon className="w-6 h-6 text-white" />
+              </div>
+              <h2 className="text-3xl font-bold text-white drop-shadow-lg">Settings</h2>
             </div>
           </div>
 
-          <div className="flex">
+          <div className="flex flex-col md:flex-row">
             {/* Sidebar */}
-            <div className="w-64 border-r border-gray-200 bg-gray-50">
-              <nav className="p-4 space-y-1">
-                {tabs.map((tab) => {
+            <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-gray-200/50 bg-gradient-to-b md:bg-gradient-to-r from-gray-50 to-indigo-50/30">
+              <nav className="p-4 space-y-2">
+                {tabs.map((tab, index) => {
                   const Icon = tab.icon
                   return (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                      className={`stagger-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 font-semibold group ${
                         activeTab === tab.id
-                          ? 'bg-indigo-600 text-white'
-                          : 'text-gray-700 hover:bg-gray-200'
+                          ? `bg-gradient-to-r ${tab.color} text-white shadow-lg scale-105`
+                          : 'text-gray-700 hover:bg-white/50 hover:scale-105'
                       }`}
+                      style={{ animationDelay: `${index * 0.05}s` }}
                     >
-                      <Icon className="w-5 h-5" />
-                      <span className="font-medium">{tab.label}</span>
+                      <Icon className={`w-5 h-5 ${activeTab === tab.id ? 'animate-pulse' : ''}`} />
+                      <span>{tab.label}</span>
                     </button>
                   )
                 })}
@@ -124,37 +124,40 @@ export default function Settings() {
             </div>
 
             {/* Content */}
-            <div className="flex-1 p-6">
+            <div className="flex-1 p-8 animate-slide-up">
               {activeTab === 'profile' && (
-                <div className="space-y-6">
+                <div className="space-y-6 animate-fade-in">
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Profile Information</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+                      <User className="w-6 h-6 text-indigo-600" />
+                      <span>Profile Information</span>
+                    </h3>
+                    <div className="space-y-5">
+                      <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
                         <input
                           type="text"
                           value={formData.full_name}
                           onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 hover:border-indigo-300"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                      <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
                         <input
                           type="email"
                           value={userData?.email || ''}
                           disabled
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                          className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
                         />
-                        <p className="mt-1 text-xs text-gray-500">Email cannot be changed</p>
+                        <p className="mt-2 text-xs text-gray-500">Email cannot be changed</p>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
+                      <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Timezone</label>
                         <select
                           value={formData.timezone}
                           onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 hover:border-indigo-300"
                         >
                           <option value="UTC">UTC</option>
                           <option value="America/New_York">Eastern Time (US)</option>
@@ -173,14 +176,17 @@ export default function Settings() {
               )}
 
               {activeTab === 'notifications' && (
-                <div className="space-y-6">
+                <div className="space-y-6 animate-fade-in">
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Notification Preferences</h3>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+                      <Bell className="w-6 h-6 text-purple-600" />
+                      <span>Notification Preferences</span>
+                    </h3>
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="stagger-item flex items-center justify-between p-5 bg-gradient-to-r from-gray-50 to-purple-50 rounded-xl border-2 border-gray-200 hover:border-purple-300 transition-all duration-300 hover-lift" style={{ animationDelay: '0.1s' }}>
                         <div>
-                          <p className="font-medium">Email Notifications</p>
-                          <p className="text-sm text-gray-500">Receive notifications via email</p>
+                          <p className="font-bold text-gray-900">Email Notifications</p>
+                          <p className="text-sm text-gray-600 mt-1">Receive notifications via email</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input
@@ -197,13 +203,13 @@ export default function Settings() {
                             }
                             className="sr-only peer"
                           />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                          <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-purple-500 peer-checked:to-pink-500"></div>
                         </label>
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="stagger-item flex items-center justify-between p-5 bg-gradient-to-r from-gray-50 to-purple-50 rounded-xl border-2 border-gray-200 hover:border-purple-300 transition-all duration-300 hover-lift" style={{ animationDelay: '0.2s' }}>
                         <div>
-                          <p className="font-medium">Task Reminders</p>
-                          <p className="text-sm text-gray-500">Get reminded about upcoming tasks</p>
+                          <p className="font-bold text-gray-900">Task Reminders</p>
+                          <p className="text-sm text-gray-600 mt-1">Get reminded about upcoming tasks</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input
@@ -220,7 +226,7 @@ export default function Settings() {
                             }
                             className="sr-only peer"
                           />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                          <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-purple-500 peer-checked:to-pink-500"></div>
                         </label>
                       </div>
                     </div>
@@ -229,31 +235,34 @@ export default function Settings() {
               )}
 
               {activeTab === 'ai' && (
-                <div className="space-y-6">
+                <div className="space-y-6 animate-fade-in">
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">AI Preferences</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+                      <Sparkles className="w-6 h-6 text-pink-600 animate-pulse" />
+                      <span>AI Preferences</span>
+                    </h3>
+                    <div className="space-y-5">
+                      <div className="stagger-item animate-slide-up" style={{ animationDelay: '0.1s' }}>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
                           Daily Plan Time
                         </label>
-                        <div className="flex items-center space-x-2">
-                          <Clock className="w-5 h-5 text-gray-400" />
+                        <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-pink-50 to-red-50 rounded-xl border-2 border-pink-200">
+                          <Clock className="w-6 h-6 text-pink-600" />
                           <input
                             type="time"
                             value={formData.daily_plan_time}
                             onChange={(e) => setFormData({ ...formData, daily_plan_time: e.target.value })}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            className="px-4 py-2 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-300 hover:border-pink-300"
                           />
                         </div>
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-2 text-xs text-gray-500">
                           When should your daily plan be generated?
                         </p>
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="stagger-item flex items-center justify-between p-5 bg-gradient-to-r from-gray-50 to-pink-50 rounded-xl border-2 border-gray-200 hover:border-pink-300 transition-all duration-300 hover-lift" style={{ animationDelay: '0.2s' }}>
                         <div>
-                          <p className="font-medium">Auto-generate Tasks from Emails</p>
-                          <p className="text-sm text-gray-500">Automatically create tasks from email content</p>
+                          <p className="font-bold text-gray-900">Auto-generate Tasks from Emails</p>
+                          <p className="text-sm text-gray-600 mt-1">Automatically create tasks from email content</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input
@@ -270,7 +279,7 @@ export default function Settings() {
                             }
                             className="sr-only peer"
                           />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                          <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-pink-500 peer-checked:to-red-500"></div>
                         </label>
                       </div>
                     </div>
@@ -279,33 +288,57 @@ export default function Settings() {
               )}
 
               {activeTab === 'account' && (
-                <div className="space-y-6">
+                <div className="space-y-6 animate-fade-in">
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Account Settings</h3>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+                      <Shield className="w-6 h-6 text-gray-600" />
+                      <span>Account Settings</span>
+                    </h3>
                     <div className="space-y-4">
-                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <p className="text-sm text-yellow-800">
-                          <strong>Account deletion:</strong> To delete your account, please contact support.
-                        </p>
+                      <div className="stagger-item p-5 bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-200 rounded-xl animate-scale-in hover-glow" style={{ animationDelay: '0.1s' }}>
+                        <div className="flex items-start space-x-3">
+                          <Shield className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-bold text-yellow-900 mb-1">Account Deletion</p>
+                            <p className="text-sm text-yellow-800 leading-relaxed">
+                              To delete your account, please contact support.
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-sm text-blue-800">
-                          <strong>Data export:</strong> You can export all your data at any time.
-                        </p>
+                      <div className="stagger-item p-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl animate-scale-in hover-glow" style={{ animationDelay: '0.2s' }}>
+                        <div className="flex items-start space-x-3">
+                          <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-bold text-blue-900 mb-1">Data Export</p>
+                            <p className="text-sm text-blue-800 leading-relaxed">
+                              You can export all your data at any time.
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="mt-8 pt-6 border-t border-gray-200">
+              <div className="mt-10 pt-6 border-t-2 border-gray-200 animate-slide-up">
                 <button
                   onClick={handleSave}
                   disabled={updateSettingsMutation.isPending}
-                  className="flex items-center space-x-2 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  className="flex items-center space-x-3 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold hover:scale-105 hover:shadow-lg group"
                 >
-                  <Save className="w-4 h-4" />
-                  <span>{updateSettingsMutation.isPending ? 'Saving...' : 'Save Changes'}</span>
+                  {updateSettingsMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5 group-hover:animate-pulse" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
