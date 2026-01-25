@@ -20,7 +20,20 @@ async def create_task(
 ):
     """Create a new task"""
     task = await task_service.create_task(db, current_user, task_data)
-    return task
+    return TaskResponse(
+        id=str(task.id),
+        title=task.title,
+        description=task.description,
+        source_type=task.source_type,
+        priority=task.priority,
+        due_date=task.due_date,
+        estimated_duration=task.estimated_duration,
+        status=task.status,
+        ai_generated=task.ai_generated,
+        created_at=task.created_at,
+        updated_at=task.updated_at,
+        completed_at=task.completed_at
+    )
 
 
 @router.get("", response_model=TaskListResponse)
@@ -42,8 +55,27 @@ async def list_tasks(
         page_size
     )
     
+    # Convert tasks to response format - explicitly convert UUIDs to strings
+    task_responses = [
+        TaskResponse(
+            id=str(task.id),
+            title=task.title,
+            description=task.description,
+            source_type=task.source_type,
+            priority=task.priority,
+            due_date=task.due_date,
+            estimated_duration=task.estimated_duration,
+            status=task.status,
+            ai_generated=task.ai_generated,
+            created_at=task.created_at,
+            updated_at=task.updated_at,
+            completed_at=task.completed_at
+        )
+        for task in tasks
+    ]
+    
     return TaskListResponse(
-        tasks=tasks,
+        tasks=task_responses,
         total=total,
         page=page,
         page_size=page_size
@@ -65,7 +97,20 @@ async def get_task(
             detail="Task not found"
         )
     
-    return task
+    return TaskResponse(
+        id=str(task.id),
+        title=task.title,
+        description=task.description,
+        source_type=task.source_type,
+        priority=task.priority,
+        due_date=task.due_date,
+        estimated_duration=task.estimated_duration,
+        status=task.status,
+        ai_generated=task.ai_generated,
+        created_at=task.created_at,
+        updated_at=task.updated_at,
+        completed_at=task.completed_at
+    )
 
 
 @router.put("/{task_id}", response_model=TaskResponse)
@@ -84,7 +129,20 @@ async def update_task(
             detail="Task not found"
         )
     
-    return task
+    return TaskResponse(
+        id=str(task.id),
+        title=task.title,
+        description=task.description,
+        source_type=task.source_type,
+        priority=task.priority,
+        due_date=task.due_date,
+        estimated_duration=task.estimated_duration,
+        status=task.status,
+        ai_generated=task.ai_generated,
+        created_at=task.created_at,
+        updated_at=task.updated_at,
+        completed_at=task.completed_at
+    )
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -118,7 +176,20 @@ async def complete_task(
             detail="Task not found"
         )
     
-    return task
+    return TaskResponse(
+        id=str(task.id),
+        title=task.title,
+        description=task.description,
+        source_type=task.source_type,
+        priority=task.priority,
+        due_date=task.due_date,
+        estimated_duration=task.estimated_duration,
+        status=task.status,
+        ai_generated=task.ai_generated,
+        created_at=task.created_at,
+        updated_at=task.updated_at,
+        completed_at=task.completed_at
+    )
 
 
 @router.get("/predict", response_model=TaskListResponse)
@@ -137,8 +208,27 @@ async def predict_tasks(
         page_size=50
     )
     
+    # Convert tasks to response format - explicitly convert UUIDs to strings
+    task_responses = [
+        TaskResponse(
+            id=str(task.id),
+            title=task.title,
+            description=task.description,
+            source_type=task.source_type,
+            priority=task.priority,
+            due_date=task.due_date,
+            estimated_duration=task.estimated_duration,
+            status=task.status,
+            ai_generated=task.ai_generated,
+            created_at=task.created_at,
+            updated_at=task.updated_at,
+            completed_at=task.completed_at
+        )
+        for task in tasks
+    ]
+    
     return TaskListResponse(
-        tasks=tasks,
+        tasks=task_responses,
         total=total,
         page=1,
         page_size=50

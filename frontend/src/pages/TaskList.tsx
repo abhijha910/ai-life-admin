@@ -55,6 +55,11 @@ export default function TaskList() {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       queryClient.invalidateQueries({ queryKey: ['daily-plan'] })
       setShowCreateModal(false)
+      setEditingTask(null)
+    },
+    onError: (error: any) => {
+      console.error('Task creation error:', error)
+      alert(error.response?.data?.detail || 'Failed to create task. Please try again.')
     },
   })
 
@@ -264,6 +269,7 @@ export default function TaskList() {
                 createMutation.mutate(taskData)
               }
             }}
+            isSubmitting={createMutation.isPending || updateMutation.isPending}
           />
         )}
       </main>
@@ -271,7 +277,12 @@ export default function TaskList() {
   )
 }
 
-function TaskModal({ task, onClose, onSave }: { task?: any; onClose: () => void; onSave: (data: any) => void }) {
+function TaskModal({ task, onClose, onSave, isSubmitting = false }: { 
+  task?: any
+  onClose: () => void
+  onSave: (data: any) => void
+  isSubmitting?: boolean
+}) {
   const [title, setTitle] = useState(task?.title || '')
   const [description, setDescription] = useState(task?.description || '')
   const [priority, setPriority] = useState(task?.priority || 50)
@@ -298,6 +309,12 @@ function TaskModal({ task, onClose, onSave }: { task?: any; onClose: () => void;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Prevent duplicate submissions
+    if (isSubmitting) {
+      return
+    }
+    
     const taskData: any = {
       title,
       description: description || null,
@@ -375,15 +392,24 @@ function TaskModal({ task, onClose, onSave }: { task?: any; onClose: () => void;
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              disabled={isSubmitting}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
-              {task ? 'Update' : 'Create'} Task
+              {isSubmitting ? (
+                <>
+                  <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>{task ? 'Updating...' : 'Creating...'}</span>
+                </>
+              ) : (
+                <span>{task ? 'Update' : 'Create'} Task</span>
+              )}
             </button>
           </div>
         </form>

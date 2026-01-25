@@ -88,6 +88,16 @@ class LLMClient:
                     result = response.json()
                     return result.get("response", "")
                     
+            except httpx.ConnectError as e:
+                # Only log on first and last attempt to reduce noise
+                if attempt == 0:
+                    logger.debug("LLM server not available, will retry...")
+                if attempt < max_retries:
+                    await asyncio.sleep(retry_delay * (attempt + 1))
+                    continue
+                # Don't log error if LLM is not configured - this is expected
+                logger.debug("LLM server not available after retries (this is normal if LLM is not configured)")
+                return ""
             except httpx.TimeoutException:
                 if attempt < max_retries:
                     logger.warning(f"LLM request timeout, retrying... (attempt {attempt + 1}/{max_retries})")
@@ -106,7 +116,12 @@ class LLMClient:
                     logger.error(f"LLM HTTP error: {e.response.status_code} - {e.response.text}")
                 return ""
             except Exception as e:
-                logger.error(f"LLM generation error: {str(e)}", exc_info=True)
+                # Only log full error on last attempt to reduce noise
+                if attempt >= max_retries - 1:
+                    logger.warning(f"LLM generation failed after {max_retries} attempts: {str(e)}")
+                elif attempt == 0:
+                    # Log once on first attempt
+                    logger.debug(f"LLM connection attempt failed, will retry: {str(e)}")
                 if attempt < max_retries:
                     await asyncio.sleep(retry_delay * (attempt + 1))
                     continue
