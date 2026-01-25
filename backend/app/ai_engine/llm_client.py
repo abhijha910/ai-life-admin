@@ -1,17 +1,36 @@
-"""LLM client for Ollama/vLLM"""
+"""LLM client for Gemini/Ollama/vLLM with fallback support"""
 import httpx
 import asyncio
 from typing import Optional, Dict, Any, List
 from app.config import settings
 import structlog
 
+# Gemini imports
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    genai = None
+    GEMINI_AVAILABLE = False
+
 logger = structlog.get_logger()
 
 
 class LLMClient:
-    """Client for interacting with self-hosted LLM"""
-    
+    """Client for interacting with Gemini/Ollama with fallback support"""
+
     def __init__(self):
+        # Initialize Gemini
+        self.gemini_model = None
+        if GEMINI_AVAILABLE and settings.GEMINI_API_KEY:
+            try:
+                genai.configure(api_key=settings.GEMINI_API_KEY)
+                self.gemini_model = genai.GenerativeModel(settings.GEMINI_MODEL)
+                logger.info("Gemini AI initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Gemini: {e}")
+
+        # Initialize Ollama settings
         self.base_url = settings.OLLAMA_BASE_URL
         self.model = settings.OLLAMA_MODEL
         self.temperature = settings.AI_TEMPERATURE
@@ -25,7 +44,63 @@ class LLMClient:
         max_tokens: Optional[int] = None,
         format: Optional[str] = None
     ) -> str:
-        """Generate text using LLM with improved error handling and retry logic"""
+        """Generate text using Gemini/Ollama with fallback chain"""
+
+        # Try Gemini first if available
+        if self.gemini_model:
+            try:
+                # Combine system prompt and user prompt for Gemini
+                if system_prompt:
+                    full_prompt = f"{system_prompt}\n\n{prompt}"
+                else:
+                    full_prompt = prompt
+
+                # Configure generation parameters
+                generation_config = genai.types.GenerationConfig(
+                    temperature=temperature or self.temperature,
+                    max_output_tokens=max_tokens or self.max_tokens,
+                )
+
+                # Add JSON format instruction if needed
+                if format == "json":
+                    full_prompt = f"{full_prompt}\n\nReturn your response as valid JSON only, no additional text or markdown."
+
+                response = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: self.gemini_model.generate_content(
+                        full_prompt,
+                        generation_config=generation_config
+                    )
+                )
+
+                if response and response.text:
+                    result = response.text.strip()
+                    logger.debug("Gemini generation successful")
+                    return result
+                else:
+                    logger.warning("Gemini returned empty response")
+
+            except Exception as e:
+                error_str = str(e)
+                # Check for quota/rate limit errors
+                if "429" in error_str or "quota" in error_str.lower() or "rate limit" in error_str.lower():
+                    logger.warning("Gemini API quota/rate limit exceeded. Consider upgrading your plan or waiting for quota reset. Falling back to Ollama.")
+                else:
+                    logger.warning(f"Gemini generation failed: {e}, falling back to Ollama")
+                # Continue to Ollama fallback
+
+        # Fallback to Ollama
+        return await self._generate_ollama(prompt, system_prompt, temperature, max_tokens, format)
+
+    async def _generate_ollama(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        format: Optional[str] = None
+    ) -> str:
+        """Generate text using Ollama with improved error handling and retry logic"""
         max_retries = 2
         retry_delay = 1.0
         
@@ -171,13 +246,28 @@ class LLMClient:
             return ""
     
     async def check_connection(self) -> bool:
-        """Check if LLM server is available"""
+        """Check if any LLM service is available (Gemini or Ollama)"""
+        # Check Gemini first
+        if self.gemini_model:
+            try:
+                # Simple test generation to verify Gemini works
+                test_response = await self.generate("Hello", system_prompt="You are a helpful assistant. Respond with 'OK'.")
+                if test_response and test_response.strip():
+                    logger.info("Gemini connection check successful")
+                    return True
+            except Exception as e:
+                logger.warning(f"Gemini connection check failed: {e}")
+
+        # Fallback to Ollama check
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(f"{self.base_url}/api/tags")
-                return response.status_code == 200
-        except Exception:
-            return False
+                if response.status_code == 200:
+                    logger.info("Ollama connection check successful")
+                    return True
+        except Exception as e:
+            logger.debug(f"Ollama connection check failed: {e}")
+        return False
 
 
 # Global LLM client instance
