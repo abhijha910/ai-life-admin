@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     # AI Engine
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3:8b"
+    GEMINI_API_KEY: str = "AIzaSyDLT1otlbaFXytbx-IaQhJhMrlEl1RD-Ns"
+    GEMINI_MODEL: str = "gemini-flash-latest"
     AI_TEMPERATURE: float = 0.7
     AI_MAX_TOKENS: int = 2000
     
