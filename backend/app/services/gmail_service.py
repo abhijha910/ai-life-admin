@@ -59,11 +59,11 @@ class GmailService(EmailService):
             
             service = build('gmail', 'v1', credentials=creds)
             
-            # Get messages
+            # Get messages - fetch recent emails (last 50)
+            # Changed from only unread/important to recent emails
             results = service.users().messages().list(
                 userId='me',
-                maxResults=50,
-                q='is:unread OR is:important'
+                maxResults=50
             ).execute()
             
             messages = results.get('messages', [])

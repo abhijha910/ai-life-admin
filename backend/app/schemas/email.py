@@ -38,8 +38,28 @@ class EmailItemResponse(BaseModel):
     ai_summary: Optional[str]
     ai_extracted_tasks: Optional[Dict[str, Any]]
     ai_extracted_dates: Optional[Dict[str, Any]]
-    ai_priority_score: int
+    ai_priority_score: Optional[int] = None
     created_at: datetime
+    
+    @classmethod
+    def from_orm(cls, obj):
+        """Convert ORM object to response, handling UUID conversion"""
+        data = {
+            "id": str(obj.id),
+            "subject": obj.subject,
+            "sender_email": obj.sender_email,
+            "sender_name": obj.sender_name,
+            "body_text": obj.body_text,
+            "received_at": obj.received_at,
+            "is_read": obj.is_read,
+            "is_important": obj.is_important,
+            "ai_summary": obj.ai_summary,
+            "ai_extracted_tasks": obj.ai_extracted_tasks,
+            "ai_extracted_dates": obj.ai_extracted_dates,
+            "ai_priority_score": obj.ai_priority_score,
+            "created_at": obj.created_at,
+        }
+        return cls(**data)
     
     class Config:
         from_attributes = True

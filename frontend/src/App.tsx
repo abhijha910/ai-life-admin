@@ -5,9 +5,11 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import Dashboard from './pages/Dashboard'
 import EmailInbox from './pages/EmailInbox'
+import EmailDetail from './pages/EmailDetail'
 import DocumentScanner from './pages/DocumentScanner'
 import TaskList from './pages/TaskList'
 import Settings from './pages/Settings'
+import OAuthCallback from './pages/OAuthCallback'
 
 const queryClient = new QueryClient()
 
@@ -40,6 +42,14 @@ function App() {
             }
           />
           <Route
+            path="/emails/:emailId"
+            element={
+              <PrivateRoute>
+                <EmailDetail />
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/documents"
             element={
               <PrivateRoute>
@@ -60,6 +70,14 @@ function App() {
             element={
               <PrivateRoute>
                 <Settings />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/emails/oauth/callback"
+            element={
+              <PrivateRoute>
+                <OAuthCallback />
               </PrivateRoute>
             }
           />

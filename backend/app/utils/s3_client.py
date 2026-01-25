@@ -56,6 +56,13 @@ def delete_file(s3_key: str) -> bool:
 
 def generate_presigned_url(s3_key: str, expiration: int = None) -> str:
     """Generate presigned URL for file access"""
+    # Handle local storage fallback
+    if s3_key.startswith("local:"):
+        local_path = s3_key.replace("local:", "")
+        # Return a local file URL (in production, serve via FastAPI static files)
+        # For now, return empty - frontend will handle download differently
+        return f"/api/v1/documents/file/{os.path.basename(local_path)}"
+    
     if not s3_client:
         return ""
     
