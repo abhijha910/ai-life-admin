@@ -11,7 +11,7 @@ if os.name == 'nt':  # Check if OS is Windows
     os.environ["PYTHON_MULTIPROCESSING_START_METHOD"] = "spawn"
 
 from app.config import settings
-from app.database import async_engine, Base
+from app.database import Base
 from app.api.v1 import auth, emails, documents, tasks, reminders, notifications, plans, settings as settings_router
 from app.middleware.error_handler import setup_error_handlers
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -22,27 +22,14 @@ logger = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
-    # Startup
-    logger.info("Starting application", environment=settings.ENVIRONMENT)
-    
-    # Create database tables (in production, use Alembic migrations)
-    # Only if database is available - don't fail startup if DB is not running
-    if settings.ENVIRONMENT == "development":
-        try:
-            async with async_engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-            logger.info("Database tables created/verified")
-        except Exception as e:
-            logger.warning(
-                "Could not connect to database during startup",
-                error=str(e),
-                message="Database features will be unavailable. Start PostgreSQL to enable full functionality."
-            )
+    # Startup - skip database initialization to avoid blocking
+    print("Starting application...")
+    print("Note: Database tables will be created on first use")
     
     yield
     
     # Shutdown
-    logger.info("Shutting down application")
+    print("Shutting down application")
 
 
 app = FastAPI(
@@ -70,8 +57,8 @@ if settings.ENVIRONMENT == "production":
         allowed_hosts=["*.yourdomain.com", "yourdomain.com"]
     )
 
-# Rate limiting middleware
-app.add_middleware(RateLimitMiddleware)
+# Rate limiting middleware (commented out temporarily to debug startup)
+# app.add_middleware(RateLimitMiddleware)
 
 # Setup error handlers
 setup_error_handlers(app)

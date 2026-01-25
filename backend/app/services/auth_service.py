@@ -1,5 +1,5 @@
 """Authentication service"""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from jose import jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -83,22 +83,30 @@ class AuthService:
             email=user_data.email,
             password_hash=hashed_password,
             full_name=user_data.full_name,
-            is_active=True
+            is_active=True,
+            timezone="UTC"
         )
         
         db.add(new_user)
-        await db.commit()
-        await db.refresh(new_user)
         
-        # Create default settings
+        # Create default settings in the same transaction
         default_settings = UserSettings(
             id=uuid.uuid4(),
             user_id=new_user.id,
             notification_preferences={},
-            ai_preferences={}
+            ai_preferences={},
+            daily_plan_time=time(8, 0, 0),  # 8:00 AM default
+            timezone="UTC"
         )
         db.add(default_settings)
-        await db.commit()
+        
+        # Commit both user and settings together
+        try:
+            await db.commit()
+            await db.refresh(new_user)
+        except Exception as e:
+            await db.rollback()
+            raise ValueError(f"Failed to create user: {str(e)}")
         
         return new_user
     

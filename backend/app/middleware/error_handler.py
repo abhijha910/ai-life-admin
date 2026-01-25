@@ -46,11 +46,20 @@ async def database_exception_handler(request: Request, exc: SQLAlchemyError):
 
 async def general_exception_handler(request: Request, exc: Exception):
     """Handle general exceptions"""
-    logger.error("Unhandled exception", error=str(exc), path=request.url.path, exc_info=True)
+    import traceback
+    from app.config import settings
+    
+    error_str = str(exc)
+    error_traceback = traceback.format_exc()
+    logger.error("Unhandled exception", error=error_str, path=request.url.path, exc_info=True)
+    
+    # In development, include more details
+    error_detail = error_str if settings.DEBUG else "Internal server error"
+    
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
-            "detail": "Internal server error",
+            "detail": error_detail,
             "message": "An unexpected error occurred. Please try again later."
         }
     )

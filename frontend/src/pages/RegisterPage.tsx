@@ -28,7 +28,9 @@ export default function RegisterPage() {
       )
       navigate('/dashboard')
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Registration failed')
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || 'Registration failed'
+      setError(errorMessage)
+      console.error('Registration error:', err.response?.data || err)
     } finally {
       setLoading(false)
     }
@@ -84,6 +86,9 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Must be at least 8 characters with uppercase, lowercase, number, and special character
+            </p>
           </div>
           <button
             type="submit"

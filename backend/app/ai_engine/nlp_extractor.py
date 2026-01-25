@@ -7,19 +7,38 @@ import structlog
 
 logger = structlog.get_logger()
 
-# Load spaCy model (download with: python -m spacy download en_core_web_sm)
-try:
-    nlp = spacy.load("en_core_web_sm")
-except OSError:
-    logger.warning("spaCy model not found. Install with: python -m spacy download en_core_web_sm")
-    nlp = None
+# Lazy loading - don't load model at import time
+_nlp_model = None
+_nlp_model_loaded = False
+
+
+def _load_spacy_model():
+    """Load spaCy model lazily (only when needed)"""
+    global _nlp_model, _nlp_model_loaded
+    if not _nlp_model_loaded:
+        try:
+            _nlp_model = spacy.load("en_core_web_sm")
+            logger.info("spaCy model loaded successfully")
+        except OSError:
+            logger.warning("spaCy model not found. Install with: python -m spacy download en_core_web_sm")
+            _nlp_model = None
+        _nlp_model_loaded = True
+    return _nlp_model
 
 
 class NLPExtractor:
     """Extract entities and information from text using NLP"""
     
     def __init__(self):
-        self.nlp = nlp
+        # Don't load model in __init__ - load lazily when first used
+        self._nlp = None
+    
+    @property
+    def nlp(self):
+        """Lazy property to load spaCy model only when accessed"""
+        if self._nlp is None:
+            self._nlp = _load_spacy_model()
+        return self._nlp
     
     def extract_entities(self, text: str) -> Dict[str, Any]:
         """Extract named entities from text"""
