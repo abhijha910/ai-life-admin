@@ -1,0 +1,18 @@
+Fix 500 errors in tasks API and improve task creation UX
+
+Backend Changes:
+- Fixed UUID serialization in all task endpoints (list, create, get, update, complete, predict)
+- TaskResponse now explicitly converts UUID id fields to strings
+- This fixes 500 Internal Server Error when fetching tasks
+
+Frontend Changes:
+- Added loading state to task creation modal
+- Disabled form buttons during submission to prevent duplicate task creation
+- Added visual feedback (spinner and 'Creating...' text) during task creation
+- Improved error handling with user-friendly messages
+- Fixed duplicate submission prevention
+
+LLM Client Improvements:
+- Reduced log verbosity for ConnectError (changed from error to debug level)
+- Only logs on first and last retry attempt to reduce noise
+- Added informative message that LLM errors are normal if LLM is not configured

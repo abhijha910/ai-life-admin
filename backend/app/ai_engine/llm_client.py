@@ -44,7 +44,12 @@ class LLMClient:
         max_tokens: Optional[int] = None,
         format: Optional[str] = None
     ) -> str:
-        """Generate text using Gemini/Ollama with fallback chain"""
+        """Generate text using Gemini/Ollama with fallback chain and Kill Switch"""
+        
+        # Level 7: Kill Switch Check
+        if hasattr(settings, 'AI_KILL_SWITCH') and settings.AI_KILL_SWITCH:
+            logger.warning("AI Kill Switch is ACTIVE. Generation aborted.")
+            return ""
 
         # Try Gemini first if available
         if self.gemini_model:

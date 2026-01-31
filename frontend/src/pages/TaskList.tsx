@@ -3,26 +3,41 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Navigation from '../components/Navigation'
 import api from '../services/api'
 import { format } from 'date-fns'
-import { CheckCircle2, Circle, Plus, Edit, Trash2, Clock, Calendar, Flag, Filter, AlertCircle } from 'lucide-react'
+import { CheckCircle2, Circle, Plus, Edit, Trash2, Clock, Calendar, Flag, Filter, AlertCircle, ShieldCheck, ShieldAlert, Zap, Brain } from 'lucide-react'
 
 export default function TaskList() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingTask, setEditingTask] = useState<any>(null)
-  const [filter, setFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('all')
+  const [filter, setFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed' | 'needs_approval'>('all')
   const queryClient = useQueryClient()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['tasks', filter],
     queryFn: async () => {
       const params = new URLSearchParams({ page: '1', page_size: '100' })
-      if (filter !== 'all') {
+      if (filter === 'needs_approval') {
+        params.append('is_approved', 'false')
+      } else if (filter !== 'all') {
         params.append('status', filter)
+        params.append('is_approved', 'true')
       }
+      // If filter is 'all', we don't append is_approved to show everything
       const response = await api.get(`/tasks?${params}`)
       return response.data
     },
     retry: 2,
     retryDelay: 1000,
+  })
+
+  const approveMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const response = await api.post(`/tasks/${taskId}/approve`)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['daily-plan'] })
+    },
   })
 
   const completeMutation = useMutation({
@@ -86,6 +101,7 @@ export default function TaskList() {
   }
 
   const tasks = data?.tasks || []
+  const unapprovedCount = tasks.filter((t: any) => !t.is_approved).length
 
   const getPriorityColor = (priority: number) => {
     if (priority >= 80) return 'bg-red-100 text-red-700 border-red-200'
@@ -146,20 +162,32 @@ export default function TaskList() {
             </div>
 
             {/* Filters */}
-            <div className="flex items-center space-x-2 animate-slide-up">
-              <Filter className="w-4 h-4 text-white/80" />
-              {(['all', 'pending', 'in_progress', 'completed'] as const).map((f, index) => (
+            <div className="flex items-center space-x-2 animate-slide-up overflow-x-auto pb-2 scrollbar-hide">
+              <Filter className="w-4 h-4 text-white/80 flex-shrink-0" />
+              {(['all', 'pending', 'in_progress', 'completed', 'needs_approval'] as const).map((f, index) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 hover:scale-105 ${
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 hover:scale-105 whitespace-nowrap ${
                     filter === f
                       ? 'bg-white text-indigo-600 shadow-lg'
                       : 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30'
                   }`}
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
-                  {f.charAt(0).toUpperCase() + f.slice(1).replace('_', ' ')}
+                  {f === 'needs_approval' ? (
+                    <span className="flex items-center space-x-1">
+                      <Zap className="w-3 h-3" />
+                      <span>AI Pending</span>
+                      {unapprovedCount > 0 && (
+                        <span className="ml-1 px-1.5 py-0.5 bg-white text-indigo-600 rounded-full text-[10px] font-bold">
+                          {unapprovedCount}
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    f.charAt(0).toUpperCase() + f.slice(1).replace('_', ' ')
+                  )}
                 </button>
               ))}
             </div>
@@ -178,31 +206,72 @@ export default function TaskList() {
                   key={task.id}
                   className={`stagger-item p-5 hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-300 hover-lift group ${
                     task.status === 'completed' ? 'opacity-60' : ''
-                  }`}
+                  } ${!task.is_approved ? 'border-l-4 border-amber-400 bg-amber-50/30' : ''}`}
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-4 flex-1">
-                      <button
-                        onClick={() => handleComplete(task.id)}
-                        className="mt-0.5 p-2 hover:scale-110 transition-transform duration-300 group/check"
-                      >
-                        <div className="group-hover/check:animate-pulse">
-                          {getStatusIcon(task.status)}
-                        </div>
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <h3
-                          className={`font-bold text-lg mb-2 group-hover:text-indigo-600 transition-colors ${
-                            task.status === 'completed'
-                              ? 'line-through text-gray-400'
-                              : 'text-gray-900'
-                          }`}
+                      {task.is_approved ? (
+                        <button
+                          onClick={() => handleComplete(task.id)}
+                          className="mt-0.5 p-2 hover:scale-110 transition-transform duration-300 group/check"
                         >
-                          {task.title}
-                        </h3>
+                          <div className="group-hover/check:animate-pulse">
+                            {getStatusIcon(task.status)}
+                          </div>
+                        </button>
+                      ) : (
+                        <div className="mt-1 p-2 bg-amber-100 rounded-lg">
+                          <Brain className="w-5 h-5 text-amber-600 animate-pulse" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h3
+                            className={`font-bold text-lg group-hover:text-indigo-600 transition-colors ${
+                              task.status === 'completed'
+                                ? 'line-through text-gray-400'
+                                : 'text-gray-900'
+                            }`}
+                          >
+                            {task.title}
+                          </h3>
+                          {!task.is_approved && (
+                            <span className="text-[10px] font-bold uppercase tracking-tighter bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-md">
+                              AI Generated
+                            </span>
+                          )}
+                          {task.risk_level > 60 && (
+                            <span className="flex items-center space-x-1 text-[10px] font-bold uppercase tracking-tighter bg-red-100 text-red-700 px-1.5 py-0.5 rounded-md">
+                              <ShieldAlert className="w-2.5 h-2.5" />
+                              <span>High Risk</span>
+                            </span>
+                          )}
+                        </div>
                         {task.description && (
-                          <p className="text-sm text-gray-600 mb-3 leading-relaxed">{task.description}</p>
+                          <p className="text-sm text-gray-600 mb-2 leading-relaxed">{task.description}</p>
+                        )}
+                        {task.consequences && (
+                          <p className="text-xs font-medium text-red-600 bg-red-50 p-2 rounded-lg border border-red-100 mb-3 italic">
+                            ⚠ {task.consequences}
+                          </p>
+                        )}
+                        {!task.is_approved && (
+                          <div className="flex items-center space-x-2 mb-3">
+                            <button
+                              onClick={() => approveMutation.mutate(task.id)}
+                              className="px-4 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-colors flex items-center space-x-1"
+                            >
+                              <ShieldCheck className="w-3 h-3" />
+                              <span>Approve Task</span>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(task.id)}
+                              className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-300 transition-colors"
+                            >
+                              Dismiss
+                            </button>
+                          </div>
                         )}
                         <div className="flex items-center flex-wrap gap-2 text-xs">
                           <span className={`px-3 py-1.5 rounded-full font-semibold border shadow-sm ${getPriorityColor(task.priority)}`}>
@@ -298,25 +367,39 @@ function TaskModal({ task, onClose, onSave, isSubmitting = false }: {
 }) {
   const [title, setTitle] = useState(task?.title || '')
   const [description, setDescription] = useState(task?.description || '')
+  const [consequences, setConsequences] = useState(task?.consequences || '')
   const [priority, setPriority] = useState(task?.priority || 50)
   const [dueDate, setDueDate] = useState(task?.due_date ? format(new Date(task.due_date), 'yyyy-MM-dd') : '')
   const [duration, setDuration] = useState(task?.estimated_duration || 60)
+  const [goalId, setGoalId] = useState(task?.goal_id || '')
+
+  const { data: goals } = useQuery({
+    queryKey: ['goals'],
+    queryFn: async () => {
+      const response = await api.get('/ai-los/goals')
+      return response.data
+    }
+  })
 
   // Update form when task changes
   useEffect(() => {
     if (task) {
       setTitle(task.title || '')
       setDescription(task.description || '')
+      setConsequences(task.consequences || '')
       setPriority(task.priority || 50)
       setDueDate(task.due_date ? format(new Date(task.due_date), 'yyyy-MM-dd') : '')
       setDuration(task.estimated_duration || 60)
+      setGoalId(task.goal_id || '')
     } else {
       // Reset form for new task
       setTitle('')
       setDescription('')
+      setConsequences('')
       setPriority(50)
       setDueDate('')
       setDuration(60)
+      setGoalId('')
     }
   }, [task])
 
@@ -331,8 +414,10 @@ function TaskModal({ task, onClose, onSave, isSubmitting = false }: {
     const taskData: any = {
       title,
       description: description || null,
+      consequences: consequences || null,
       priority: parseInt(priority.toString()),
       estimated_duration: parseInt(duration.toString()),
+      goal_id: goalId || null,
     }
     
     // Only include due_date if provided
@@ -347,7 +432,7 @@ function TaskModal({ task, onClose, onSave, isSubmitting = false }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4">
-      <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl max-w-lg w-full p-8 animate-scale-in border border-gray-200/50">
+      <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl max-w-lg w-full p-8 animate-scale-in border border-gray-200/50 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             {task ? 'Edit Task' : 'Create New Task'}
@@ -375,9 +460,32 @@ function TaskModal({ task, onClose, onSave, isSubmitting = false }: {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={3}
+              rows={2}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 hover:border-indigo-300"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Consequences (What happens if missed?)</label>
+            <input
+              type="text"
+              value={consequences}
+              onChange={(e) => setConsequences(e.target.value)}
+              placeholder="e.g. ₹500 penalty, missed deadline"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 hover:border-indigo-300"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Goal Alignment</label>
+            <select
+              value={goalId}
+              onChange={(e) => setGoalId(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 hover:border-indigo-300"
+            >
+              <option value="">General (No specific goal)</option>
+              {goals?.map((goal: any) => (
+                <option key={goal.id} value={goal.id}>{goal.title} ({goal.category})</option>
+              ))}
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

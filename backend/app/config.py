@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-flash-latest"
     AI_TEMPERATURE: float = 0.7
     AI_MAX_TOKENS: int = 2000
+    AI_KILL_SWITCH: bool = False  # Level 7: Global safety switch
     
     # Celery
     CELERY_BROKER_URL: str = "redis://localhost:6379/1"

@@ -83,12 +83,19 @@ async def upload_document(
                 # Create tasks automatically
                 for task_data in tasks:
                     try:
+                        # Resolve entities (Goal, etc.)
+                        resolved_data = await task_service.resolve_ai_task_entities(db, current_user, task_data)
+                        
                         task_create = TaskCreate(
-                            title=task_data["title"],
-                            description=task_data.get("description"),
-                            due_date=datetime.fromisoformat(task_data["due_date"]) if task_data.get("due_date") else None,
-                            priority=task_data.get("priority", 50),
-                            estimated_duration=task_data.get("estimated_duration")
+                            title=resolved_data["title"],
+                            description=resolved_data.get("description"),
+                            consequences=resolved_data.get("consequences"),
+                            due_date=datetime.fromisoformat(resolved_data["due_date"]) if resolved_data.get("due_date") else None,
+                            priority=resolved_data.get("priority", 50),
+                            estimated_duration=resolved_data.get("estimated_duration"),
+                            goal_id=resolved_data.get("goal_id"),
+                            is_approved=False,  # AI tasks need approval (Level 7)
+                            ai_generated=True
                         )
                         await task_service.create_task(
                             db,
@@ -252,12 +259,19 @@ async def process_document(
         
         # Create tasks
         for task_data in tasks:
+            # Resolve entities (Goal, etc.)
+            resolved_data = await task_service.resolve_ai_task_entities(db, current_user, task_data)
+            
             task_create = TaskCreate(
-                title=task_data["title"],
-                description=task_data.get("description"),
-                due_date=datetime.fromisoformat(task_data["due_date"]) if task_data.get("due_date") else None,
-                priority=task_data.get("priority", 50),
-                estimated_duration=task_data.get("estimated_duration")
+                title=resolved_data["title"],
+                description=resolved_data.get("description"),
+                consequences=resolved_data.get("consequences"),
+                due_date=datetime.fromisoformat(resolved_data["due_date"]) if resolved_data.get("due_date") else None,
+                priority=resolved_data.get("priority", 50),
+                estimated_duration=resolved_data.get("estimated_duration"),
+                goal_id=resolved_data.get("goal_id"),
+                is_approved=False,
+                ai_generated=True
             )
             await task_service.create_task(
                 db,

@@ -649,8 +649,30 @@ async def sync_emails(
         # Update last sync time
         account.last_sync_at = datetime.now()
         await db.commit()
+
+        # Level 4: Generate Action Suggestions after sync
+        from app.services.action_service import action_engine
+        from app.models.graph import ActionSuggestion
+        
+        # Get latest emails to analyze
+        result = await db.execute(select(EmailItem).where(EmailItem.email_account_id == account.id).limit(10))
+        latest_emails = result.scalars().all()
+        
+        suggestions = await action_engine.suggest_follow_ups(str(current_user.id), latest_emails)
+        for s in suggestions:
+            new_s = ActionSuggestion(
+                user_id=current_user.id,
+                type=s["type"],
+                source_id=uuid.UUID(s["source_id"]),
+                title=s["title"],
+                description=s["description"],
+                draft_content=s["draft_content"],
+                action_label=s["action_label"]
+            )
+            db.add(new_s)
+        await db.commit()
     
-    return {"synced_count": synced_count, "message": "Sync completed"}
+    return {"synced_count": synced_count, "message": "Sync completed and AI insights generated"}
 
 
 @router.get("", response_model=EmailListResponse)

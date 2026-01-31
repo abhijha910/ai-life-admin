@@ -48,6 +48,9 @@ async def get_plan_for_date(
             "id": str(task.id),
             "title": task.title,
             "priority": task.priority,
+            "risk_level": task.risk_level,
+            "consequences": task.consequences,
+            "is_approved": task.is_approved,
             "due_date": task.due_date.isoformat() if task.due_date else None,
             "estimated_duration": task.estimated_duration or 60,
             "source_type": task.source_type or "manual"
@@ -102,6 +105,9 @@ async def regenerate_plan(
             "id": str(task.id),
             "title": task.title,
             "priority": task.priority,
+            "risk_level": task.risk_level,
+            "consequences": task.consequences,
+            "is_approved": task.is_approved,
             "due_date": task.due_date.isoformat() if task.due_date else None,
             "estimated_duration": task.estimated_duration or 60,
             "source_type": task.source_type or "manual"

@@ -40,16 +40,20 @@ CRITICAL RULES:
 2. Ignore completed tasks, past events, or vague statements
 3. Extract clear, specific tasks with actionable verbs (review, submit, call, schedule, etc.)
 4. If a due date is mentioned, extract it in ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)
-5. Priority: 0-100 scale where:
+5. Identify the CONSEQUENCES if the task is not completed (e.g., penalty, missed opportunity, late fee, etc.)
+6. Confidence: Provide a confidence score (0-1) for how certain you are about this task.
+7. Priority: 0-100 scale where:
    - 80-100: Urgent/High priority (deadlines within 24h, marked urgent)
    - 60-79: Important (deadlines within 3 days, action required)
    - 40-59: Normal (deadlines within a week)
    - 20-39: Low (deadlines beyond a week)
    - 0-19: Very low (no deadline, optional)
-6. Estimated duration should be in minutes
-7. Return ONLY valid JSON array, no additional text
+8. Estimated duration should be in minutes
+9. Identify the GOAL this task contributes to (e.g., 'Health', 'Career', 'Finance', 'Personal', etc.)
+10. Identify any INSTITUTION involved (e.g., 'Bank of America', 'Employer Name', 'IRS', etc.)
+11. Return ONLY valid JSON array, no additional text
 
-Return format: [{"title": "Task title", "description": "Optional details", "due_date": "YYYY-MM-DD or null", "priority": 0-100, "estimated_duration": minutes or null}]"""
+Return format: [{"title": "Task title", "description": "Optional details", "consequences": "What happens if missed", "confidence_score": 0-1, "due_date": "YYYY-MM-DD or null", "priority": 0-100, "estimated_duration": minutes or null, "goal_category": "Health/Career/etc", "institution_name": "Name of institution or null"}]"""
             
             # Enhanced user prompt with context
             context_info = ""
@@ -108,10 +112,15 @@ Analyze the text and extract all actionable tasks. Return a JSON array of tasks.
                         validated_task = {
                             "title": title,
                             "description": self._clean_description(task.get("description", "").strip()),
+                            "consequences": task.get("consequences", "").strip(),
+                            "confidence_score": self._validate_confidence(task.get("confidence_score", 1.0)),
                             "due_date": self._parse_due_date(task.get("due_date"), dates),
                             "priority": self._validate_priority(task.get("priority", 50)),
                             "estimated_duration": self._validate_duration(task.get("estimated_duration")),
-                            "ai_generated": True
+                            "goal_category": task.get("goal_category"),
+                            "institution_name": task.get("institution_name"),
+                            "ai_generated": True,
+                            "is_approved": False  # New tasks need approval
                         }
                         
                         if validated_task["title"]:
@@ -259,6 +268,14 @@ Analyze the text and extract all actionable tasks. Return a JSON array of tasks.
             return max(0, min(100, priority))
         except (ValueError, TypeError):
             return 50
+
+    def _validate_confidence(self, confidence: Any) -> float:
+        """Validate and normalize confidence score (0.0-1.0)"""
+        try:
+            confidence = float(confidence)
+            return max(0.0, min(1.0, confidence))
+        except (ValueError, TypeError):
+            return 1.0
 
 
 # Global task generator instance

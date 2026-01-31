@@ -12,7 +12,12 @@ if os.name == 'nt':  # Check if OS is Windows
 
 from app.config import settings
 from app.database import Base
-from app.api.v1 import auth, emails, documents, tasks, reminders, notifications, plans, settings as settings_router
+from app.api.v1 import (
+    auth, emails, documents, tasks, reminders, 
+    notifications, plans, settings as settings_router, ai_los
+)
+# Force reload to register new routes
+print("AI Life OS Routes Initialized")
 from app.middleware.error_handler import setup_error_handlers
 from app.middleware.rate_limit import RateLimitMiddleware
 
@@ -72,6 +77,7 @@ app.include_router(reminders.router, prefix="/api/v1/reminders", tags=["Reminder
 app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["Notifications"])
 app.include_router(plans.router, prefix="/api/v1/plans", tags=["Daily Plans"])
 app.include_router(settings_router.router, prefix="/api/v1/settings", tags=["Settings"])
+app.include_router(ai_los.router, prefix="/api/v1/ai-los", tags=["AI-LOS Advanced"])
 
 
 @app.get("/")

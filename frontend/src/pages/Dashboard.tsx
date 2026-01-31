@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Navigation from '../components/Navigation'
 import api from '../services/api'
 import { format } from 'date-fns'
-import { Calendar, Clock, TrendingUp, CheckCircle2, AlertCircle, Sparkles, Loader2 } from 'lucide-react'
+import { Calendar, Clock, TrendingUp, CheckCircle2, AlertCircle, Sparkles, Loader2, ShieldAlert, Zap, Brain, X } from 'lucide-react'
 
 export default function Dashboard() {
   const queryClient = useQueryClient()
@@ -15,6 +15,23 @@ export default function Dashboard() {
     },
     retry: 2,
     retryDelay: 1000,
+  })
+
+  const { data: suggestions } = useQuery({
+    queryKey: ['action-suggestions'],
+    queryFn: async () => {
+      const response = await api.get('/ai-los/suggestions')
+      return response.data
+    },
+  })
+
+  const dismissSuggestionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.post(`/ai-los/suggestions/${id}/dismiss`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['action-suggestions'] })
+    },
   })
 
   const { data: tasksData, error: tasksError } = useQuery({
@@ -40,13 +57,13 @@ export default function Dashboard() {
   const tasks = tasksData?.tasks || []
   const completedTasks = tasks.filter((t: any) => t.status === 'completed').length
   const pendingTasks = tasks.filter((t: any) => t.status === 'pending').length
-  const inProgressTasks = tasks.filter((t: any) => t.status === 'in_progress').length
+  const unapprovedTasks = tasks.filter((t: any) => !t.is_approved).length
   const totalDuration = plan?.total_duration || 0
 
   const stats = [
     { label: 'Total Tasks', value: tasks.length, icon: CheckCircle2, color: 'indigo', bg: 'from-indigo-500 to-blue-500' },
+    { label: 'Needs Approval', value: unapprovedTasks, icon: Brain, color: 'purple', bg: 'from-purple-500 to-indigo-500' },
     { label: 'Completed', value: completedTasks, icon: TrendingUp, color: 'green', bg: 'from-green-500 to-emerald-500' },
-    { label: 'In Progress', value: inProgressTasks, icon: Clock, color: 'blue', bg: 'from-blue-500 to-cyan-500' },
     { label: 'Pending', value: pendingTasks, icon: AlertCircle, color: 'orange', bg: 'from-orange-500 to-amber-500' },
   ]
 
@@ -96,6 +113,83 @@ export default function Dashboard() {
             )
           })}
         </div>
+
+        {/* Level 3 & 6: Cognitive Load & Burnout Radar */}
+        {plan?.overload_info && (
+          <div className={`mb-8 p-6 rounded-2xl border-2 animate-scale-in hover-glow ${
+            plan.overload_info.is_overloaded 
+              ? 'bg-red-50 border-red-200' 
+              : 'bg-emerald-50 border-emerald-200'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className={`p-3 rounded-xl ${
+                  plan.overload_info.is_overloaded ? 'bg-red-500' : 'bg-emerald-500'
+                }`}>
+                  <Brain className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className={`text-lg font-bold ${
+                    plan.overload_info.is_overloaded ? 'text-red-900' : 'text-emerald-900'
+                  }`}>
+                    Cognitive Load: {plan.overload_info.load_percentage}%
+                  </h3>
+                  <p className={plan.overload_info.is_overloaded ? 'text-red-700' : 'text-emerald-700'}>
+                    {plan.overload_info.recommendation}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right hidden sm:block">
+                <span className={`px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider ${
+                  plan.overload_info.burnout_risk === 'high' 
+                    ? 'bg-red-100 text-red-700' 
+                    : plan.overload_info.burnout_risk === 'medium'
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-emerald-100 text-emerald-700'
+                }`}>
+                  {plan.overload_info.burnout_risk} Burnout Risk
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Level 4: Action Suggestions (Action Cards) */}
+        {suggestions && suggestions.length > 0 && (
+          <div className="mb-8 animate-slide-up">
+            <div className="flex items-center space-x-2 mb-4">
+              <Zap className="w-5 h-5 text-amber-500" />
+              <h3 className="text-xl font-bold text-gray-800">AI Insights & Actions</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {suggestions.map((suggestion: any, index: number) => (
+                <div 
+                  key={suggestion.id}
+                  className="bg-white rounded-2xl shadow-md border border-amber-100 p-5 hover-lift hover-glow relative group overflow-hidden"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  <button 
+                    onClick={() => dismissSuggestionMutation.mutate(suggestion.id)}
+                    className="absolute top-3 right-3 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="p-2 bg-amber-100 rounded-lg">
+                      <Sparkles className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">{suggestion.type.replace('_', ' ')}</span>
+                  </div>
+                  <h4 className="font-bold text-gray-900 mb-2">{suggestion.title}</h4>
+                  <p className="text-sm text-gray-600 mb-4">{suggestion.description}</p>
+                  <button className="w-full py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold text-sm hover:from-amber-600 hover:to-orange-600 transition-all shadow-md">
+                    {suggestion.action_label}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Today's Plan */}
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden animate-slide-up hover-glow">
@@ -156,6 +250,16 @@ export default function Dashboard() {
                       <div>
                         <h3 className="font-bold text-indigo-900 mb-2 text-lg">AI Recommendations</h3>
                         <p className="text-indigo-800 leading-relaxed">{plan.ai_recommendations}</p>
+                        {plan.overload_info?.regret_warnings?.length > 0 && (
+                          <div className="mt-4 space-y-2">
+                            {plan.overload_info.regret_warnings.map((warning: string, i: number) => (
+                              <div key={i} className="flex items-center space-x-2 text-amber-700 text-sm font-medium bg-amber-50 p-2 rounded-lg border border-amber-100">
+                                <ShieldAlert className="w-4 h-4" />
+                                <span>{warning}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -166,14 +270,32 @@ export default function Dashboard() {
                     plan.tasks.map((task: any, index: number) => (
                       <div
                         key={task.id || index}
-                        className="stagger-item border-l-4 border-indigo-500 bg-gradient-to-r from-gray-50 to-indigo-50/30 rounded-r-2xl p-5 hover:shadow-xl transition-all duration-300 hover-lift group"
+                        className={`stagger-item border-l-4 ${
+                          task.risk_level >= 70 ? 'border-red-500' : 
+                          task.risk_level >= 40 ? 'border-amber-500' : 'border-indigo-500'
+                        } bg-gradient-to-r from-gray-50 to-indigo-50/30 rounded-r-2xl p-5 hover:shadow-xl transition-all duration-300 hover-lift group`}
                         style={{ animationDelay: `${index * 0.1}s` }}
                       >
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <h4 className="font-bold text-gray-900 mb-2 text-lg group-hover:text-indigo-600 transition-colors">{task.title}</h4>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-bold text-gray-900 text-lg group-hover:text-indigo-600 transition-colors">{task.title}</h4>
+                              {task.risk_level > 0 && (
+                                <div className="flex items-center space-x-1 px-2 py-1 bg-white shadow-sm border rounded-lg text-xs font-bold">
+                                  <ShieldAlert className={`w-3 h-3 ${task.risk_level >= 70 ? 'text-red-500' : 'text-amber-500'}`} />
+                                  <span className={task.risk_level >= 70 ? 'text-red-700' : 'text-amber-700'}>
+                                    {task.risk_level}% Risk
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                             {task.description && (
-                              <p className="text-sm text-gray-600 mb-3 leading-relaxed">{task.description}</p>
+                              <p className="text-sm text-gray-600 mb-2 leading-relaxed">{task.description}</p>
+                            )}
+                            {task.consequences && (
+                              <p className="text-xs font-medium text-red-600 bg-red-50 p-2 rounded-lg border border-red-100 mb-3 italic">
+                                ⚠ {task.consequences}
+                              </p>
                             )}
                             <div className="flex items-center space-x-4 text-xs flex-wrap gap-2">
                               <span className="flex items-center space-x-2 px-3 py-1.5 rounded-full font-semibold bg-white shadow-sm">

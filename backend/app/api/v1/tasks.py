@@ -24,12 +24,18 @@ async def create_task(
         id=str(task.id),
         title=task.title,
         description=task.description,
+        consequences=task.consequences,
         source_type=task.source_type,
         priority=task.priority,
+        risk_level=task.risk_level,
+        confidence_score=task.confidence_score,
         due_date=task.due_date,
         estimated_duration=task.estimated_duration,
         status=task.status,
         ai_generated=task.ai_generated,
+        is_approved=task.is_approved,
+        dependency_id=str(task.dependency_id) if task.dependency_id else None,
+        goal_id=str(task.goal_id) if task.goal_id else None,
         created_at=task.created_at,
         updated_at=task.updated_at,
         completed_at=task.completed_at
@@ -40,6 +46,7 @@ async def create_task(
 async def list_tasks(
     status: Optional[str] = Query(None),
     due_date: Optional[date] = Query(None),
+    is_approved: Optional[bool] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
@@ -51,6 +58,7 @@ async def list_tasks(
         current_user,
         status,
         due_date,
+        is_approved,
         page,
         page_size
     )
@@ -61,12 +69,18 @@ async def list_tasks(
             id=str(task.id),
             title=task.title,
             description=task.description,
+            consequences=task.consequences,
             source_type=task.source_type,
             priority=task.priority,
+            risk_level=task.risk_level,
+            confidence_score=task.confidence_score,
             due_date=task.due_date,
             estimated_duration=task.estimated_duration,
             status=task.status,
             ai_generated=task.ai_generated,
+            is_approved=task.is_approved,
+            dependency_id=str(task.dependency_id) if task.dependency_id else None,
+            goal_id=str(task.goal_id) if task.goal_id else None,
             created_at=task.created_at,
             updated_at=task.updated_at,
             completed_at=task.completed_at
@@ -101,12 +115,18 @@ async def get_task(
         id=str(task.id),
         title=task.title,
         description=task.description,
+        consequences=task.consequences,
         source_type=task.source_type,
         priority=task.priority,
+        risk_level=task.risk_level,
+        confidence_score=task.confidence_score,
         due_date=task.due_date,
         estimated_duration=task.estimated_duration,
         status=task.status,
         ai_generated=task.ai_generated,
+        is_approved=task.is_approved,
+        dependency_id=str(task.dependency_id) if task.dependency_id else None,
+        goal_id=str(task.goal_id) if task.goal_id else None,
         created_at=task.created_at,
         updated_at=task.updated_at,
         completed_at=task.completed_at
@@ -133,12 +153,18 @@ async def update_task(
         id=str(task.id),
         title=task.title,
         description=task.description,
+        consequences=task.consequences,
         source_type=task.source_type,
         priority=task.priority,
+        risk_level=task.risk_level,
+        confidence_score=task.confidence_score,
         due_date=task.due_date,
         estimated_duration=task.estimated_duration,
         status=task.status,
         ai_generated=task.ai_generated,
+        is_approved=task.is_approved,
+        dependency_id=str(task.dependency_id) if task.dependency_id else None,
+        goal_id=str(task.goal_id) if task.goal_id else None,
         created_at=task.created_at,
         updated_at=task.updated_at,
         completed_at=task.completed_at
@@ -180,12 +206,60 @@ async def complete_task(
         id=str(task.id),
         title=task.title,
         description=task.description,
+        consequences=task.consequences,
         source_type=task.source_type,
         priority=task.priority,
+        risk_level=task.risk_level,
+        confidence_score=task.confidence_score,
         due_date=task.due_date,
         estimated_duration=task.estimated_duration,
         status=task.status,
         ai_generated=task.ai_generated,
+        is_approved=task.is_approved,
+        dependency_id=str(task.dependency_id) if task.dependency_id else None,
+        goal_id=str(task.goal_id) if task.goal_id else None,
+        created_at=task.created_at,
+        updated_at=task.updated_at,
+        completed_at=task.completed_at
+    )
+
+
+@router.post("/{task_id}/approve", response_model=TaskResponse)
+async def approve_task(
+    task_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Approve an AI-generated task"""
+    task = await task_service.update_task(
+        db, 
+        task_id, 
+        current_user, 
+        TaskUpdate(is_approved=True)
+    )
+    
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+    
+    return TaskResponse(
+        id=str(task.id),
+        title=task.title,
+        description=task.description,
+        consequences=task.consequences,
+        source_type=task.source_type,
+        priority=task.priority,
+        risk_level=task.risk_level,
+        confidence_score=task.confidence_score,
+        due_date=task.due_date,
+        estimated_duration=task.estimated_duration,
+        status=task.status,
+        ai_generated=task.ai_generated,
+        is_approved=task.is_approved,
+        dependency_id=str(task.dependency_id) if task.dependency_id else None,
+        goal_id=str(task.goal_id) if task.goal_id else None,
         created_at=task.created_at,
         updated_at=task.updated_at,
         completed_at=task.completed_at
@@ -214,12 +288,18 @@ async def predict_tasks(
             id=str(task.id),
             title=task.title,
             description=task.description,
+            consequences=task.consequences,
             source_type=task.source_type,
             priority=task.priority,
+            risk_level=task.risk_level,
+            confidence_score=task.confidence_score,
             due_date=task.due_date,
             estimated_duration=task.estimated_duration,
             status=task.status,
             ai_generated=task.ai_generated,
+            is_approved=task.is_approved,
+            dependency_id=str(task.dependency_id) if task.dependency_id else None,
+            goal_id=str(task.goal_id) if task.goal_id else None,
             created_at=task.created_at,
             updated_at=task.updated_at,
             completed_at=task.completed_at
