@@ -35,6 +35,11 @@ class LLMClient:
         self.model = settings.OLLAMA_MODEL
         self.temperature = settings.AI_TEMPERATURE
         self.max_tokens = settings.AI_MAX_TOKENS
+
+        # Initialize Groq settings (OpenAI-compatible API)
+        self.groq_api_key = settings.GROQ_API_KEY
+        self.groq_model = settings.GROQ_MODEL
+        self.groq_base_url = settings.GROQ_BASE_URL
     
     async def generate(
         self,
@@ -94,8 +99,65 @@ class LLMClient:
                     logger.warning(f"Gemini generation failed: {e}, falling back to Ollama")
                 # Continue to Ollama fallback
 
+        # Try Groq before local Ollama
+        if self.groq_api_key:
+            groq_result = await self._generate_groq(
+                prompt, system_prompt, temperature, max_tokens, format
+            )
+            if groq_result:
+                return groq_result
+
         # Fallback to Ollama
         return await self._generate_ollama(prompt, system_prompt, temperature, max_tokens, format)
+
+    async def _generate_groq(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        format: Optional[str] = None
+    ) -> str:
+        """Generate text using Groq (OpenAI-compatible API)."""
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.groq_api_key}",
+                "Content-Type": "application/json",
+            }
+
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+
+            payload: Dict[str, Any] = {
+                "model": self.groq_model,
+                "messages": messages,
+                "temperature": temperature or self.temperature,
+                "max_tokens": max_tokens or self.max_tokens,
+            }
+
+            # Ask for strict JSON object when caller expects JSON.
+            if format == "json":
+                payload["response_format"] = {"type": "json_object"}
+
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    f"{self.groq_base_url}/chat/completions",
+                    headers=headers,
+                    json=payload,
+                )
+                response.raise_for_status()
+                data = response.json()
+
+            choices = data.get("choices", [])
+            if not choices:
+                return ""
+            content = choices[0].get("message", {}).get("content", "")
+            return content.strip() if content else ""
+        except Exception as e:
+            logger.warning(f"Groq generation failed: {e}, falling back to Ollama")
+            return ""
 
     async def _generate_ollama(
         self,
@@ -262,6 +324,20 @@ class LLMClient:
                     return True
             except Exception as e:
                 logger.warning(f"Gemini connection check failed: {e}")
+
+        # Check Groq API
+        if self.groq_api_key:
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    response = await client.get(
+                        f"{self.groq_base_url}/models",
+                        headers={"Authorization": f"Bearer {self.groq_api_key}"},
+                    )
+                    if response.status_code == 200:
+                        logger.info("Groq connection check successful")
+                        return True
+            except Exception as e:
+                logger.warning(f"Groq connection check failed: {e}")
 
         # Fallback to Ollama check
         try:

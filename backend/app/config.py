@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = "llama3:8b"
     GEMINI_API_KEY: str = "AIzaSyDLT1otlbaFXytbx-IaQhJhMrlEl1RD-Ns"
     GEMINI_MODEL: str = "gemini-flash-latest"
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.1-8b-instant"
+    GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
     AI_TEMPERATURE: float = 0.7
     AI_MAX_TOKENS: int = 2000
     AI_KILL_SWITCH: bool = False  # Level 7: Global safety switch
@@ -69,6 +72,20 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
     LOG_FILE: str = "logs/app.log"
+
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def parse_debug_value(cls, value):
+        """Accept common non-boolean DEBUG env values."""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"1", "true", "yes", "on", "debug", "development", "dev"}:
+                return True
+            if normalized in {"0", "false", "no", "off", "release", "production", "prod"}:
+                return False
+        return value
     
     @property
     def cors_origins_list(self) -> List[str]:
